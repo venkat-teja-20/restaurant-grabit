@@ -72,11 +72,11 @@ public class JWTFilter extends OncePerRequestFilter {
             APIError apiError=e.getAuthenticationError();
             if(Utility.isNullOrEmpty(apiError))
                 apiError=new APIError(CommonErrors.AUTHENTICATION_REQUIRED.toString(),CommonErrors.AUTHENTICATION_REQUIRED.getMessage());
-            log.info("Authentication Unsuccessful : "+Utility.toJson(e.getAuthenticationError()));
+            log.info("Authentication Unsuccessful : "+Utility.toJson(apiError));
             request.setAttribute("responseWriteFlag",true);
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write(Utility.toJson(e.getAuthenticationError()));
+            response.getWriter().write(Utility.toJson(apiError));
         }
     }
 }

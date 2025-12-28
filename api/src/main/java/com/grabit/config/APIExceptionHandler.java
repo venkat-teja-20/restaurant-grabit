@@ -11,6 +11,7 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -120,6 +121,8 @@ public class APIExceptionHandler {
     @ExceptionHandler(value = Exception.class)
     public APIError handleException(Exception ex, HttpServletResponse response) {
         log.info("Unknown Issue Occurred : " + ex);
+        if(ex instanceof AccessDeniedException e)
+            throw e;
         response.setStatus(500);
         return new APIError(CommonErrors.unknown_error.toString(), CommonErrors.unknown_error.getMessage());
     }

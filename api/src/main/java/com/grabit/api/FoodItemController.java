@@ -39,7 +39,7 @@ public class FoodItemController {
     }
 
     @PatchMapping(value = "/ordered/update",consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String,Object> updateFoodItemOrdersAndAvailability(@RequestBody List<FoodItemDTO> request){
+    public Map<String,Object> updateFoodItemOrdersAndAvailability(@RequestBody List<FoodItemDTO> request, @RequestHeader Map<String,String> headers){
         return foodItemService.updateOrdersAndAvailabilityOfAFoodItem(request);
     }
 }

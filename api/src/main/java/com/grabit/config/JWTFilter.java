@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -46,25 +47,25 @@ public class JWTFilter extends OncePerRequestFilter {
                 Claims claims = JwtUtil.extractClaims(token);
                 email = JwtUtil.getEmail(claims);
                 permissions = JwtUtil.getPermissions(claims);
+                if (permissions == null || permissions.isEmpty()) {
+                    throw new CustomException(Utility.buildErrorObject("PERMISSIONS_MISSING", "User do not have any valid permissions", 500, "jwtFilter"));
+                }
                 role = JwtUtil.extractRole(claims);
             }
 
-            if (permissions == null || permissions.isEmpty()) {
-                throw new CustomException(Utility.buildErrorObject("PERMISSIONS_MISSING", "User do not have any valid permissions", 500, "jwtFilter"));
-            }
-
             // Get Permissions Data From Auth Service
-            if (role != null && email != null && SecurityContextHolder.getContext() == null) {
-                RoleDTO roleDTO = restTemplate.getForObject("http://localhost:7090/role/permissions?role=" + role, RoleDTO.class);
+            if (role != null && email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                RoleDTO roleDTO = restTemplate.getForObject("http://localhost:7090/role/" + role+"/", RoleDTO.class);
                 List<SimpleGrantedAuthority> authorities = new ArrayList<>();
                 if (Utility.isNullOrEmpty(roleDTO) || Utility.isNullOrEmpty(roleDTO.getRole()) || Utility.isNullOrEmpty(roleDTO.getPermissions())) {
                     throw new CustomException(Utility.buildErrorObject("INVALID_RESPONSE", "response received from auth service while fetching role details is null or not valid", 500, "jwtFilter"));
                 }
-                authorities.add(new SimpleGrantedAuthority(roleDTO.getRole().toValue()));
+                authorities.add(new SimpleGrantedAuthority("ROLE_"+roleDTO.getRole().toValue()));
                 for (PermissionDTO permissionDTO : roleDTO.getPermissions()) {
                     authorities.add(new SimpleGrantedAuthority(permissionDTO.getPermission().toValue()));
                 }
                 UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(email, null, authorities);
+                usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
             }
             filterChain.doFilter(request, response);
@@ -73,7 +74,7 @@ public class JWTFilter extends OncePerRequestFilter {
             if(Utility.isNullOrEmpty(apiError))
                 apiError=new APIError(CommonErrors.AUTHENTICATION_REQUIRED.toString(),CommonErrors.AUTHENTICATION_REQUIRED.getMessage());
             log.info("Authentication Unsuccessful : "+Utility.toJson(apiError));
-            request.setAttribute("responseWriteFlag",true);
+            request.setAttribute("responseWriterFlag",true);
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.getWriter().write(Utility.toJson(apiError));

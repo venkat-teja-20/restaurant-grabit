@@ -131,6 +131,7 @@ public class FoodItemService {
 
             foodItem.setBranch(branch);
             foodItem.setOrderCount(0L);
+            foodItem.setQuantitySold(0L);
 
             foodItemList.add(foodItem);
         }

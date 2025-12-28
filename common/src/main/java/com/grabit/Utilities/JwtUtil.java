@@ -10,14 +10,18 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.security.PublicKey;
 import java.util.List;
 
 @Component
 @Log4j2
 public class JwtUtil {
 
-    @Autowired
-    private static KeyProvider keyProvider;
+    private static PublicKey publicKey;
+
+    public JwtUtil(KeyProvider keyProvider){
+        publicKey=keyProvider.getPublicKey();
+    }
 
     public static String getEmail(Claims claims){
         return claims.getSubject();
@@ -35,7 +39,7 @@ public class JwtUtil {
         try {
             Claims claims = Jwts
                     .parser()
-                    .verifyWith(keyProvider.getPublicKey())
+                    .verifyWith(publicKey)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();

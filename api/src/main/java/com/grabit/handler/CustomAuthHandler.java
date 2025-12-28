@@ -20,7 +20,7 @@ import java.io.IOException;
 public class CustomAuthHandler implements AccessDeniedHandler, AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-        if(Utility.isNullOrEmpty(request.getAttribute("responseWriteFlag"))){
+        if(Utility.isNullOrEmpty(request.getAttribute("responseWriterFlag"))){
             log.warn("Remote Host : "+request.getRemoteHost());
             log.warn("Remote Address : "+request.getRemoteAddr());
             log.info("Authentication Error : "+authException);

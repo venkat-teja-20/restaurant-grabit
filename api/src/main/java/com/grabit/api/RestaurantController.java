@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -30,6 +31,7 @@ public class RestaurantController {
     }
 
     @GetMapping(value = "/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize(value = "hasAnyAuthority('ADMIN','END_USER')")
     public RestaurantDTO getRestaurant(@PathVariable(value = "id") String restaurantId){
         return restaurantService.getRestaurant(restaurantId);
     }
@@ -56,7 +58,7 @@ public class RestaurantController {
     }
 
     @PatchMapping(value = "/{id}/branch/{branchId}/orders/update",produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String,Object> updateRestaurantAndBranchOrders(@PathVariable(value = "id") String restaurantId, @PathVariable(value = "branchId") String branchId){
+    public Map<String,Object> updateRestaurantAndBranchOrders(@PathVariable(value = "id") String restaurantId,@RequestHeader Map<String,String> headers, @PathVariable(value = "branchId") String branchId){
 //        this request must be verified to come only from order service, implement this after learning OAuth or Spring Security
         return restaurantService.updateOrdersInRestaurantAndBranch(restaurantId,branchId);
     }

@@ -21,6 +21,9 @@ public class JpaConfiguration {
     public AuditorAware<String> auditorAware() {
         return ()->{
             Authentication authentication= SecurityContextHolder.getContext().getAuthentication();
+            if(authentication==null || !authentication.isAuthenticated())
+                return Optional.of("Kafka Consumer");
+
             Object principal=authentication.getPrincipal();
             if(principal instanceof UserDetails userDetails)
                 return Optional.ofNullable(userDetails.getUsername());

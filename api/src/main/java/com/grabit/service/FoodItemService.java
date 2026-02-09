@@ -1,5 +1,6 @@
 package com.grabit.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.grabit.Utilities.ModelMapperUtility;
 import com.grabit.Utilities.Utility;
 import com.grabit.bean.Restaurant.FoodItemDTO;
@@ -9,12 +10,14 @@ import com.grabit.enums.FoodCategory;
 import com.grabit.enums.ItemStatus;
 import com.grabit.enums.ItemType;
 import com.grabit.exception.CustomException;
+import com.grabit.helper.RedisHelper;
 import com.grabit.repository.BranchRepository;
 import com.grabit.repository.FoodItemRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,11 +27,21 @@ import java.util.*;
 @Log4j2
 public class FoodItemService {
 
-    @Autowired
-    FoodItemRepository foodItemRepository;
+    private final FoodItemRepository foodItemRepository;
 
-    @Autowired
-    BranchRepository branchRepository;
+    private final BranchRepository branchRepository;
+
+    private final RedisTemplate<String,Object> redisTemplate;
+
+    private final ObjectMapper objectMapper;
+
+    public FoodItemService(FoodItemRepository foodItemRepository, BranchRepository branchRepository, RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
+        this.foodItemRepository = foodItemRepository;
+        this.branchRepository = branchRepository;
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
+    }
+
 
     public List<FoodItemDTO> addFoodItemToTheBranch(List<FoodItemDTO> request,String restaurantId,String branchId){
         if(!Utility.isNumeric(restaurantId))
@@ -44,6 +57,8 @@ public class FoodItemService {
             foodItemDTO.setBranchId(Long.valueOf(branchId));
             return foodItemDTO;
         }).toList();
+        RedisHelper redisHelper=new RedisHelper(redisTemplate);
+        redisHelper.addFoodItemToRedis("fooditem",foodItemDTOList);
         return foodItemDTOList;
     }
 
@@ -145,6 +160,18 @@ public class FoodItemService {
         return ModelMapperUtility.map(foodItem, FoodItemDTO.class);
     }
 
+    public FoodItemDTO getFoodItemDetailsOfABranch(String itemId, String branchId){
+        if(!Utility.isNumeric(itemId))
+            throw new CustomException(Utility.buildErrorObject("INVALID_ITEM_ID","Item id provided in the request is not valid",400,"getFoodItemDetailsOfABranch"));
+        if(!Utility.isNumeric(branchId))
+            throw new CustomException(Utility.buildErrorObject("INVALID_BRANCH_ID","Branch id provided in the request is not valid",400,"getFoodItemDetailsOfABranch"));
+        RedisHelper redisHelper=new RedisHelper(redisTemplate);
+        LinkedHashMap<String,Object> foodItemById= (LinkedHashMap<String, Object>) redisHelper.getFoodItem("fooditem",branchId,itemId);
+        if(Utility.isNullOrEmpty(foodItemById))
+            throw new CustomException(Utility.buildErrorObject("FOOD_ITEM_NOT_FOUND","Food item not found in Redis",500,"getFoodItemDetailsOfABranch"));
+        return objectMapper.convertValue(foodItemById, FoodItemDTO.class);
+    }
+
     @Transactional
     public Map<String,Object> updateOrdersAndAvailabilityOfAFoodItem(List<FoodItemDTO> request){
         Map<Long,Integer> idsIndex=new HashMap<>();
@@ -180,7 +207,14 @@ public class FoodItemService {
             }
             return foodItem;
         }).toList();
-        foodItemRepository.saveAll(modifiedFoodItemList);
+        List<FoodItem> updatedFoodItemList=foodItemRepository.saveAll(modifiedFoodItemList);
+        List<FoodItemDTO> foodItemDTOList=updatedFoodItemList.stream().map(foodItem -> {
+            FoodItemDTO foodItemDTO= ModelMapperUtility.map(foodItem,FoodItemDTO.class);
+            foodItemDTO.setBranchId(foodItem.getBranch().getId());
+            return foodItemDTO;
+        }).toList();
+        RedisHelper redisHelper=new RedisHelper(redisTemplate);
+        redisHelper.addFoodItemToRedis("fooditem",foodItemDTOList);
         return Map.of("status","SUCCESS");
     }
 

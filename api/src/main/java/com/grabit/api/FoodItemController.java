@@ -38,6 +38,11 @@ public class FoodItemController {
         return foodItemService.getFoodItemDetailsById(itemId);
     }
 
+    @GetMapping(value = "/{id}/branch/{branchId}",produces = MediaType.APPLICATION_JSON_VALUE)
+    public FoodItemDTO getAFoodItemOfBranch(@PathVariable(value = "id") String itemId, @PathVariable(value = "branchId") String branchId){
+        return foodItemService.getFoodItemDetailsOfABranch(itemId,branchId);
+    }
+
     @PatchMapping(value = "/ordered/update",consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String,Object> updateFoodItemOrdersAndAvailability(@RequestBody List<FoodItemDTO> request, @RequestHeader Map<String,String> headers){
         return foodItemService.updateOrdersAndAvailabilityOfAFoodItem(request);
